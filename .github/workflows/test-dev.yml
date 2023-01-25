@@ -1,5 +1,5 @@
 name: Development tests
-on: [push, pull_request]
+on: [ push, pull_request ]
 jobs:
   test:
     name: Tests without emulator
