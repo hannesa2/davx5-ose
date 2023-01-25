@@ -47,4 +47,5 @@ jobs:
         with:
           prerelease: ${{ env.prerelease }}
           files: app/build/outputs/apk/ose/release/*.apk
+          generate_release_notes: true
           fail_on_unmatched_files: true

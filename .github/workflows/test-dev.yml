@@ -1,13 +1,12 @@
 name: Development tests
 on:
-  push:
+   push:
     branches:
       - '*'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-
 jobs:
   test:
     name: Tests without emulator
