@@ -32,6 +32,7 @@ android {
         versionName '4.3.12.1'
 
         buildConfigField "long", "buildTime", System.currentTimeMillis() + "L"
+        buildConfigField "String", 'GIT_REPOSITORY', "\"" + getGitOriginRemote() + "\""
 
         setProperty "archivesBaseName", "davx5-ose-" + getVersionName()
 
@@ -161,6 +162,8 @@ configurations {
 }
 
 dependencies {
+    implementation 'com.github.hannesa2:githubAppUpdate:2.0'
+
     implementation "org.jetbrains.kotlin:kotlin-stdlib:${versions.kotlin}"
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3'
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
@@ -248,4 +251,12 @@ dependencies {
 
     testImplementation "com.squareup.okhttp3:mockwebserver:${versions.okhttp}"
     testImplementation 'junit:junit:4.13.2'
+}
+
+static def getGitOriginRemote() {
+    def process = "git remote -v".execute()
+    def values = process.text.toString().trim().split("\\r\\n|\\n|\\r")
+
+    def found = values.find { it.startsWith("origin") && it.endsWith("(push)") }
+    return found.replace("origin", "").replace("(push)", "").replace(".git", "").trim()
 }

@@ -76,6 +76,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.WorkQuery
+import at.bitfire.davdroid.BuildConfig
 import at.bitfire.davdroid.R
 import at.bitfire.davdroid.db.AppDatabase
 import at.bitfire.davdroid.servicedetection.RefreshCollectionsWorker
@@ -92,6 +93,7 @@ import com.google.accompanist.themeadapter.material.MdcTheme
 import com.google.android.material.navigation.NavigationView
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
+import info.hannes.github.AppUpdateHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -236,6 +238,8 @@ class AccountsActivity: AppCompatActivity() {
         // handle "Sync all" intent from launcher shortcut
         if (savedInstanceState == null && intent.action == Intent.ACTION_SYNC)
             model.syncAllAccounts()
+
+        AppUpdateHelper.checkForNewVersion(this, BuildConfig.GIT_REPOSITORY)
     }
 
     @Composable
