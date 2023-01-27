@@ -11,10 +11,12 @@ import android.content.pm.ShortcutManager
 import android.os.Build
 import android.os.Bundle
 import android.view.MenuItem
+import android.widget.Toast
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.getSystemService
 import androidx.core.view.GravityCompat
+import at.bitfire.davdroid.BuildConfig
 import at.bitfire.davdroid.R
 import at.bitfire.davdroid.databinding.ActivityAccountsBinding
 import at.bitfire.davdroid.syncadapter.SyncWorker
@@ -22,6 +24,7 @@ import at.bitfire.davdroid.ui.intro.IntroActivity
 import at.bitfire.davdroid.ui.setup.LoginActivity
 import com.google.android.material.navigation.NavigationView
 import dagger.hilt.android.AndroidEntryPoint
+import info.hannes.github.AppUpdateHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -73,6 +76,8 @@ class AccountsActivity: AppCompatActivity(), NavigationView.OnNavigationItemSele
         // handle "Sync all" intent from launcher shortcut
         if (savedInstanceState == null && intent.action == Intent.ACTION_SYNC)
             syncAllAccounts()
+
+        AppUpdateHelper.checkForNewVersion(this, BuildConfig.GIT_REPOSITORY)
     }
 
     override fun onResume() {
@@ -112,6 +117,11 @@ class AccountsActivity: AppCompatActivity(), NavigationView.OnNavigationItemSele
         val accounts = allAccounts()
         for (account in accounts)
             SyncWorker.requestSync(this, account)
+    }
+
+    fun updateGithubApp(item: MenuItem? = null) {
+        AppUpdateHelper.checkWithDialog(this, BuildConfig.GIT_REPOSITORY, force = true,
+            callback = { message -> Toast.makeText(this, message, Toast.LENGTH_LONG).show() })
     }
 
 }
