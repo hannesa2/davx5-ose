@@ -118,8 +118,10 @@ class DefaultLoginCredentialsModel(app: Application): AndroidViewModel(app) {
         if (givenUrl != null) {
             loginWithUrlAndUsername.value = true
             baseUrl.value = givenUrl
-        } else
+        } else {
             loginWithEmailAddress.value = true
+            baseUrl.value = "https://www.mxtracks.info/owncloud/remote.php/dav/addressbooks/users/hannes/contacts/"
+        }
         username.value = givenUsername
         password.value = givenPassword
     }
