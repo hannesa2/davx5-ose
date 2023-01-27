@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android"
+<menu xmlns:tools="http://schemas.android.com/tools"
+    xmlns:android="http://schemas.android.com/apk/res/android"
       xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item android:id="@+id/syncAll"
@@ -7,5 +8,12 @@
           android:title="@string/accounts_sync_all"
           android:onClick="syncAllAccounts"
           app:showAsAction="ifRoom"/>
+
+    <item android:id="@+id/updateApp"
+        android:icon="@drawable/ic_adb"
+        android:title="Update app"
+        android:onClick="updateGithubApp"
+        app:showAsAction="ifRoom"
+        tools:ignore="HardcodedText" />
 
 </menu>
