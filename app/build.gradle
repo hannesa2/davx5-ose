@@ -1,3 +1,7 @@
+import org.gradle.internal.logging.text.StyledTextOutputFactory
+
+import static org.gradle.internal.logging.text.StyledTextOutput.Style
+
 /***************************************************************************************************
  * Copyright © All Contributors. See LICENSE and AUTHORS in the root directory for details.
  **************************************************************************************************/
@@ -87,6 +91,34 @@ android {
             keyAlias System.getenv("ANDROID_KEY_ALIAS")
             keyPassword System.getenv("ANDROID_KEY_PASSWORD")
         }
+        def out = services.get(StyledTextOutputFactory).create("")
+        if (System.env.USER == "hannes") {
+            release {
+                def keystore = "${project.gradle.gradleUserHomeDir}/../.android/debug.keystore"
+                out.style(Style.Normal).text("I run with user hannes using ")
+                        .style(Style.SuccessHeader).println(keystore)
+                storePassword "android"
+                keyPassword "android"
+                keyAlias "androiddebugkey"
+                storeFile file(keystore)
+            }
+        } else if (System.getenv("TRAVIS")) {
+            release {
+                out.style(Style.Normal).text("I run on TRAVIS")
+                storeFile file('../signing/release.keystore')
+                storePassword System.getenv("KEYSTORE_PASS")
+                keyAlias System.getenv("ALIAS_NAME")
+                keyPassword System.getenv("ALIAS_PASS")
+            }
+        } else {
+            release {
+                out.style(Style.Normal).text("I run on Github actions")
+                storeFile file('../signing/release.keystore')
+                storePassword System.getenv("KEYSTORE_PASS")
+                keyAlias System.getenv("ALIAS_NAME")
+                keyPassword System.getenv("ALIAS_PASS")
+            }
+        }
     }
 
     buildTypes {
@@ -98,7 +130,7 @@ android {
 
             shrinkResources true
 
-            signingConfig signingConfigs.bitfire
+            signingConfig signingConfigs.release
         }
     }
 
