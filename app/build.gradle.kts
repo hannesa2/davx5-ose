@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 /***************************************************************************************************
  * Copyright © All Contributors. See LICENSE and AUTHORS in the root directory for details.
  **************************************************************************************************/
@@ -11,6 +14,12 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+val keystorePropertiesFile = rootProject.file("signing/keystore.properties")
+val keystoreProperties = Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
 // Android configuration
 android {
     compileSdk = 35
@@ -22,6 +31,7 @@ android {
         versionName = "4.4.6-alpha.1"
 
         setProperty("archivesBaseName", "davx5-ose-$versionName")
+        buildConfigField("String", "GIT_REPOSITORY", "\"" + getGitOriginRemote() + "\"")
 
         minSdk = 24        // Android 7.0
         targetSdk = 35     // Android 15
@@ -65,25 +75,50 @@ android {
     }
 
     signingConfigs {
-        create("bitfire") {
-            storeFile = file(System.getenv("ANDROID_KEYSTORE") ?: "/dev/null")
-            storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
-            keyAlias = System.getenv("ANDROID_KEY_ALIAS")
-            keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+        register("debugCI") {
+            storeFile = file("../signing/debug.keystore")
+            storePassword = "android"
+            keyPassword = "android"
+            keyAlias = "androiddebugkey"
+        }
+        register("release") {
+            storeFile = file("../signing/release.keystore")
+            storePassword = keystoreProperties["storePassword"] as String
+            keyAlias = keystoreProperties["keyAlias"] as String
+            keyPassword = keystoreProperties["keyPassword"] as String
         }
     }
-
     buildTypes {
-        getByName("release") {
-            isMinifyEnabled = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules-release.pro")
-
-            isShrinkResources = true
-
-            signingConfig = signingConfigs.findByName("bitfire")
+        debug {
+            if (System.getenv("CI") == "true") { // Github action
+                println("I run on Github and use for debug the RELEASE signing")
+                signingConfig = signingConfigs.findByName("release")
+            }
+        }
+        release {
+            signingConfig = signingConfigs.findByName("release")
+            if (System.getenv("CI_SERVER") != null) { // gitlab
+                println("I run on Gitlab and use RELEASE signing")
+                signingConfig = signingConfigs.findByName("release")
+            } else if (System.getenv("CI") == "true") { // Github
+                println("I run on Github and use RELEASE signing")
+                signingConfig = signingConfigs.findByName("release")
+            } else if (file("../signing/release.keystore").exists()) {
+                println("I use RELEASE signing")
+                signingConfig = signingConfigs.findByName("release")
+            } else {
+                println("I run somewhere else and I use debug signing")
+                signingConfig = signingConfigs.findByName("debugCI")
+            }
+            isMinifyEnabled = false
+            proguardFiles.addAll(
+                listOf(
+                    getDefaultProguardFile("proguard-android-optimize.txt"),
+                    file("proguard-rules.pro"),
+                ),
+            )
         }
     }
-
     lint {
         disable += arrayOf("GoogleAppIndexingWarning", "ImpliedQuantity", "MissingQuantity", "MissingTranslation", "ExtraTranslation", "RtlEnabled", "RtlHardcoded", "Typos", "NullSafeMutableLiveData")
     }
@@ -132,6 +167,7 @@ configurations {
 }
 
 dependencies {
+    implementation("com.github.hannesa2:githubAppUpdate:2.3.1")
     // core
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.coroutines)
@@ -213,4 +249,30 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.okhttp.mockwebserver)
+}
+
+@JvmOverloads
+fun String.runCommand(workingDir: File = File("./")): String {
+    val parts = this.split("\\s".toRegex())
+    val proc = ProcessBuilder(*parts.toTypedArray())
+        .directory(workingDir)
+        .redirectOutput(ProcessBuilder.Redirect.PIPE)
+        .redirectError(ProcessBuilder.Redirect.PIPE)
+        .start()
+
+    proc.waitFor(1, TimeUnit.MINUTES)
+    return proc.inputStream.bufferedReader().readText().trim()
+}
+
+fun getGitOriginRemote(): String {
+    val process = "git remote -v".runCommand()
+    val values = process.trim().split("\n")
+    val foundLine = values.find {
+        it.startsWith("origin") && it.endsWith("(push)")
+    }
+    return foundLine
+        ?.replace("origin", "")
+        ?.replace("(push)", "")
+        ?.replace(".git", "")
+        ?.trim()!!
 }

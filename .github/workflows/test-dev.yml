@@ -2,16 +2,12 @@ name: Development tests
 on:
   push:
     branches:
-      - '*'
-
-concurrency:
-  group: test-dev-${{ github.ref }}
-  cancel-in-progress: true
+      - dev-ose-origin
+  pull_request:
 
 jobs:
   compile:
     name: Compile for build cache
-    if: ${{ github.ref == 'refs/heads/main-ose' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,6 +16,11 @@ jobs:
           distribution: temurin
           java-version: 21
 
+      - name: Decrypt keystore
+        run: ./signing/decrypt.sh
+        env:
+          CRYPT_PASS: ${{ secrets.CRYPT_PASS }}
+
       # See https://community.gradle.org/github-actions/docs/setup-gradle/ for more information
       - uses: gradle/actions/setup-gradle@v4            # creates build cache when on main branch
         with:
@@ -27,10 +28,11 @@ jobs:
           dependency-graph: generate-and-submit         # submit Github Dependency Graph info
 
       - run: ./gradlew --build-cache --configuration-cache --configuration-cache-problems=warn app:compileOseDebugSource
+      - name: cleanup
+        run: ./signing/cleanup.sh
 
   test:
     needs: compile
-    if: ${{ always() }}     # even if compile didn't run (because not on main branch)
     name: Lint and unit tests
     runs-on: ubuntu-latest
     steps:
@@ -44,14 +46,20 @@ jobs:
           cache-encryption-key: ${{ secrets.gradle_encryption_key }}
           cache-read-only: true
 
+      - name: Decrypt keystore
+        run: ./signing/decrypt.sh
+        env:
+          CRYPT_PASS: ${{ secrets.CRYPT_PASS }}
+
       - name: Run lint
         run: ./gradlew --build-cache --configuration-cache --configuration-cache-problems=warn app:lintOseDebug
       - name: Run unit tests
         run: ./gradlew --build-cache --configuration-cache --configuration-cache-problems=warn app:testOseDebugUnitTest
+      - name: cleanup
+        run: ./signing/cleanup.sh
 
   test_on_emulator:
     needs: compile
-    if: ${{ always() }}     # even if compile didn't run (because not on main branch)
     name: Instrumented tests
     runs-on: ubuntu-latest
     steps:
@@ -71,6 +79,11 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      - name: Decrypt keystore
+        run: ./signing/decrypt.sh
+        env:
+          CRYPT_PASS: ${{ secrets.CRYPT_PASS }}
+
       - name: Cache AVD
         uses: actions/cache@v4
         with:
@@ -79,3 +92,6 @@ jobs:
 
       - name: Run device tests
         run: ./gradlew --build-cache --configuration-cache --configuration-cache-problems=warn app:virtualCheck
+
+      - name: cleanup
+        run: ./signing/cleanup.sh
