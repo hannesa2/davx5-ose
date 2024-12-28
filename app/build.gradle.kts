@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 /***************************************************************************************************
  * Copyright © All Contributors. See LICENSE and AUTHORS in the root directory for details.
  **************************************************************************************************/
@@ -9,6 +12,12 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.ksp)
+}
+
+val keystorePropertiesFile = rootProject.file("signing/keystore.properties")
+val keystoreProperties = Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
 // Android configuration
@@ -66,25 +75,50 @@ android {
     }
 
     signingConfigs {
-        create("bitfire") {
-            storeFile = file(System.getenv("ANDROID_KEYSTORE") ?: "/dev/null")
-            storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
-            keyAlias = System.getenv("ANDROID_KEY_ALIAS")
-            keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+        register("debugCI") {
+            storeFile = file("../signing/debug.keystore")
+            storePassword = "android"
+            keyPassword = "android"
+            keyAlias = "androiddebugkey"
+        }
+        register("release") {
+            storeFile = file("../signing/release.keystore")
+            storePassword = keystoreProperties["storePassword"] as String
+            keyAlias = keystoreProperties["keyAlias"] as String
+            keyPassword = keystoreProperties["keyPassword"] as String
         }
     }
-
     buildTypes {
-        getByName("release") {
-            isMinifyEnabled = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules-release.pro")
-
-            isShrinkResources = true
-
-            signingConfig = signingConfigs.findByName("bitfire")
+        debug {
+            if (System.getenv("CI") == "true") { // Github action
+                println("I run on Github and use for debug the RELEASE signing")
+                signingConfig = signingConfigs.findByName("release")
+            }
+        }
+        release {
+            signingConfig = signingConfigs.findByName("release")
+            if (System.getenv("CI_SERVER") != null) { // gitlab
+                println("I run on Gitlab and use RELEASE signing")
+                signingConfig = signingConfigs.findByName("release")
+            } else if (System.getenv("CI") == "true") { // Github
+                println("I run on Github and use RELEASE signing")
+                signingConfig = signingConfigs.findByName("release")
+            } else if (file("../signing/release.keystore").exists()) {
+                println("I use RELEASE signing")
+                signingConfig = signingConfigs.findByName("release")
+            } else {
+                println("I run somewhere else and I use debug signing")
+                signingConfig = signingConfigs.findByName("debugCI")
+            }
+            isMinifyEnabled = false
+            proguardFiles.addAll(
+                listOf(
+                    getDefaultProguardFile("proguard-android-optimize.txt"),
+                    file("proguard-rules.pro"),
+                ),
+            )
         }
     }
-
     lint {
         disable += arrayOf("GoogleAppIndexingWarning", "ImpliedQuantity", "MissingQuantity", "MissingTranslation", "ExtraTranslation", "RtlEnabled", "RtlHardcoded", "Typos", "NullSafeMutableLiveData")
     }

@@ -26,17 +26,14 @@ jobs:
           java-version: 21
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Prepare keystore
-        run: echo ${{ secrets.android_keystore_base64 }} | base64 -d >$GITHUB_WORKSPACE/keystore.jks
+      - name: Decrypt keystore
+        run: ./signing/decrypt.sh
+        env:
+          CRYPT_PASS: ${{ secrets.CRYPT_PASS }}
 
       - name: Build signed package
         # Make sure that caches are disabled to generate reproducible release builds
         run: ./gradlew --no-build-cache --no-configuration-cache --no-daemon app:assembleRelease
-        env:
-          ANDROID_KEYSTORE: ${{ github.workspace }}/keystore.jks
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.android_keystore_password }}
-          ANDROID_KEY_ALIAS: ${{ secrets.android_key_alias }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.android_key_password }}
 
       - name: Create Github release
         uses: softprops/action-gh-release@v2
@@ -46,3 +43,6 @@ jobs:
           fail_on_unmatched_files: true
           generate_release_notes: true
           discussion_category_name: Announcements
+
+      - name: cleanup
+        run: ./signing/cleanup.sh
