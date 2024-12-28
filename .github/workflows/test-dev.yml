@@ -2,16 +2,12 @@ name: Development tests
 on:
   push:
     branches:
-      - '*'
-
-concurrency:
-  group: test-dev-${{ github.ref }}
-  cancel-in-progress: true
+      - dev-ose-origin
+  pull_request:
 
 jobs:
   compile:
     name: Compile for build cache
-    if: ${{ github.ref == 'refs/heads/main-ose' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,7 +26,6 @@ jobs:
 
   test:
     needs: compile
-    if: ${{ always() }}     # even if compile didn't run (because not on main branch)
     name: Lint and unit tests
     runs-on: ubuntu-latest
     steps:
@@ -51,7 +46,6 @@ jobs:
 
   test_on_emulator:
     needs: compile
-    if: ${{ always() }}     # even if compile didn't run (because not on main branch)
     name: Instrumented tests
     runs-on: ubuntu-latest
     steps:
