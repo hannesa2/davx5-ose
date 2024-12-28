@@ -22,6 +22,7 @@ android {
         versionName = "4.4.6-alpha.1"
 
         setProperty("archivesBaseName", "davx5-ose-$versionName")
+        buildConfigField("String", "GIT_REPOSITORY", "\"" + getGitOriginRemote() + "\"")
 
         minSdk = 24        // Android 7.0
         targetSdk = 35     // Android 15
@@ -132,6 +133,7 @@ configurations {
 }
 
 dependencies {
+    implementation("com.github.hannesa2:githubAppUpdate:2.3.1")
     // core
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.coroutines)
@@ -213,4 +215,30 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.okhttp.mockwebserver)
+}
+
+@JvmOverloads
+fun String.runCommand(workingDir: File = File("./")): String {
+    val parts = this.split("\\s".toRegex())
+    val proc = ProcessBuilder(*parts.toTypedArray())
+        .directory(workingDir)
+        .redirectOutput(ProcessBuilder.Redirect.PIPE)
+        .redirectError(ProcessBuilder.Redirect.PIPE)
+        .start()
+
+    proc.waitFor(1, TimeUnit.MINUTES)
+    return proc.inputStream.bufferedReader().readText().trim()
+}
+
+fun getGitOriginRemote(): String {
+    val process = "git remote -v".runCommand()
+    val values = process.trim().split("\n")
+    val foundLine = values.find {
+        it.startsWith("origin") && it.endsWith("(push)")
+    }
+    return foundLine
+        ?.replace("origin", "")
+        ?.replace("(push)", "")
+        ?.replace(".git", "")
+        ?.trim()!!
 }
