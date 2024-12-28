@@ -4,6 +4,8 @@ on:
     branches:
       - main
       - release
+      - dev-ose-origin
+      - ownVersion
   pull_request:
 
 concurrency:
