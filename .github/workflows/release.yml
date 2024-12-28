@@ -26,16 +26,13 @@ jobs:
           distribution: temurin
           java-version: ${{ env.java-version }}
 
-      - name: Prepare keystore
-        run: echo ${{ secrets.android_keystore_base64 }} | base64 -d >$GITHUB_WORKSPACE/keystore.jks
+      - name: Decrypt keystore
+        run: ./signing/decrypt.sh
+        env:
+          CRYPT_PASS: ${{ secrets.CRYPT_PASS }}
 
       - name: Build signed package
         run: ./gradlew app:clean app-ose:assembleRelease
-        env:
-          ANDROID_KEYSTORE: ${{ github.workspace }}/keystore.jks
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.android_keystore_password }}
-          ANDROID_KEY_ALIAS: ${{ secrets.android_key_alias }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.android_key_password }}
 
       - name: Create Github release
         uses: softprops/action-gh-release@v3
@@ -44,3 +41,6 @@ jobs:
           files: app-ose/build/outputs/apk/ose/release/*.apk
           fail_on_unmatched_files: true
           generate_release_notes: true
+
+      - name: cleanup
+        run: ./signing/cleanup.sh

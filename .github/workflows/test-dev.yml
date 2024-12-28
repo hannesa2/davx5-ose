@@ -33,6 +33,11 @@ jobs:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
 
+      - name: Decrypt keystore
+        run: ./signing/decrypt.sh
+        env:
+          CRYPT_PASS: ${{ secrets.CRYPT_PASS }}
+
       # See https://community.gradle.org/github-actions/docs/setup-gradle/ for more information
       - uses: gradle/actions/setup-gradle@v6
         with:
@@ -42,6 +47,8 @@ jobs:
 
       - name: Compile
         run: ./gradlew app-ose:assembleDebug
+      - name: cleanup
+        run: ./signing/cleanup.sh
 
   unit_tests:
     needs: compile
@@ -57,6 +64,11 @@ jobs:
         with:
           cache-encryption-key: ${{ secrets.gradle_encryption_key }}
           cache-read-only: true
+
+      - name: Decrypt keystore
+        run: ./signing/decrypt.sh
+        env:
+          CRYPT_PASS: ${{ secrets.CRYPT_PASS }}
 
       - name: Lint checks
         run: ./gradlew core:lintDebug app:lintOseDebug
@@ -103,9 +115,10 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - name: Instrumented tests
-        # currently no instrumented tests for app-ose
-        run: ./gradlew core:virtualDebugAndroidTest
+      - name: Decrypt keystore
+        run: ./signing/decrypt.sh
+        env:
+          CRYPT_PASS: ${{ secrets.CRYPT_PASS }}
 
       - name: Cache AVD
         uses: actions/cache/save@v5
@@ -113,3 +126,6 @@ jobs:
         with:
           path: ~/.config/.android/avd                          # where AVD is stored
           key: avd-${{ hashFiles('app-ose/build.gradle.kts') }} # gradle-managed devices are defined there
+
+      - name: cleanup
+        run: ./signing/cleanup.sh

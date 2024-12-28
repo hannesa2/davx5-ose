@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 /*
  * Copyright © All Contributors. See LICENSE and AUTHORS in the root directory for details.
  */
@@ -17,6 +20,13 @@ java {
     }
 }
 
+val keystorePropertiesFile = rootProject.file("signing/keystore.properties")
+val keystoreProperties = Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
+// Android configuration
 android {
     compileSdk = 37
 
@@ -46,11 +56,37 @@ android {
     namespace = "at.bitfire.davdroid"
 
     buildTypes {
+        getByName("debug") {
+            if (System.getenv("CI") == "true") { // Github action
+                println("I run on Github and use for debug the RELEASE signing")
+                signingConfig = signingConfigs.findByName("release")
+            }
+        }
         getByName("release") {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.findByName("release")
+            if (System.getenv("CI_SERVER") != null) { // gitlab
+                println("I run on Gitlab and use RELEASE signing")
+                signingConfig = signingConfigs.findByName("release")
+            } else if (System.getenv("CI") == "true") { // Github
+                println("I run on Github and use RELEASE signing")
+                signingConfig = signingConfigs.findByName("release")
+            } else if (file("../signing/release.keystore").exists()) {
+                println("I use RELEASE signing")
+                signingConfig = signingConfigs.findByName("release")
+            } else {
+                println("I run somewhere else and I use debug signing")
+                signingConfig = signingConfigs.findByName("debugCI")
+            }
+            isMinifyEnabled = false
+            proguardFiles.addAll(
+                listOf(
+                    getDefaultProguardFile("proguard-android-optimize.txt"),
+                    file("proguard-rules.pro"),
+                ),
+            )
         }
     }
-
     lint {
         disable += arrayOf("GoogleAppIndexingWarning", "ImpliedQuantity", "MissingQuantity", "MissingTranslation", "ExtraTranslation", "RtlEnabled", "RtlHardcoded", "Typos")
     }

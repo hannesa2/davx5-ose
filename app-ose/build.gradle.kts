@@ -1,6 +1,9 @@
 /*
  * Copyright © All Contributors. See LICENSE and AUTHORS in the root directory for details.
  */
+import java.util.Properties
+import java.io.File
+import java.io.FileInputStream
 
 plugins {
     alias(libs.plugins.android.application)
@@ -8,6 +11,12 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
     alias(libs.plugins.mikepenz.aboutLibraries.android)
+}
+
+val keystorePropertiesFile = rootProject.file("signing/keystore.properties")
+val keystoreProperties = Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
 java {
@@ -101,11 +110,17 @@ android {
     }
 
     signingConfigs {
-        create("bitfire") {
-            storeFile = file(System.getenv("ANDROID_KEYSTORE") ?: "/dev/null")
-            storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
-            keyAlias = System.getenv("ANDROID_KEY_ALIAS")
-            keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+        register("debugCI") {
+            storeFile = file("../signing/debug.keystore")
+            storePassword = "android"
+            keyPassword = "android"
+            keyAlias = "androiddebugkey"
+        }
+        register("release") {
+            storeFile = file("../signing/release.keystore")
+            storePassword = keystoreProperties["storePassword"] as String
+            keyAlias = keystoreProperties["keyAlias"] as String
+            keyPassword = keystoreProperties["keyPassword"] as String
         }
     }
 
@@ -117,7 +132,7 @@ android {
             isShrinkResources = true
 
             // must be after signingConfigs {} block
-            signingConfig = signingConfigs.findByName("bitfire")
+            signingConfig = signingConfigs.findByName("release")
         }
     }
 }
