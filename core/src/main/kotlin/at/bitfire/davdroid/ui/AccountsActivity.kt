@@ -8,10 +8,12 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
+import at.bitfire.davdroid.BuildConfig
 import at.bitfire.davdroid.ui.account.AccountActivity
 import at.bitfire.davdroid.ui.intro.IntroActivity
 import at.bitfire.davdroid.ui.setup.LoginActivity
 import dagger.hilt.android.AndroidEntryPoint
+import info.hannes.github.AppUpdateHelper
 import javax.inject.Inject
 
 
@@ -53,6 +55,10 @@ class AccountsActivity: AppCompatActivity() {
                 }
             )
         }
+        AppUpdateHelper.checkForNewVersion(
+            this,
+            gitRepoUrl = BuildConfig.GIT_REPOSITORY
+        )
     }
 
 }
