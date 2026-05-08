@@ -8,19 +8,7 @@ on:
       - ownVersion
   pull_request:
 
-concurrency:
-  group: ${{github.workflow_ref}}-${{ github.ref }}
-  cancel-in-progress: true
-
-# We provide a remote Gradle build cache. Take the settings from the secrets and enable
-# configuration and build cache for all gradle jobs.
-#
-# Note: The secrets are not available for forks and Dependabot PRs.
 env:
-  GRADLE_BUILDCACHE_URL: ${{ secrets.gradle_buildcache_url }}
-  GRADLE_BUILDCACHE_USERNAME: ${{ secrets.gradle_buildcache_username }}
-  GRADLE_BUILDCACHE_PASSWORD: ${{ secrets.gradle_buildcache_password }}
-  GRADLE_OPTS: -Dorg.gradle.caching=true -Dorg.gradle.configuration-cache=true
   JAVA_VERSION: 21   # keep in sync with gradle/gradle-daemon-jvm.properties
 
 jobs:
@@ -38,13 +26,6 @@ jobs:
         run: ./signing/decrypt.sh
         env:
           CRYPT_PASS: ${{ secrets.CRYPT_PASS }}
-
-      # See https://community.gradle.org/github-actions/docs/setup-gradle/ for more information
-      - uses: gradle/actions/setup-gradle@v6
-        with:
-          cache-encryption-key: ${{ secrets.gradle_encryption_key }}
-          cache-read-only: false                            # allow to update the cache
-          gradle-home-cache-excludes: caches/build-cache-1  # don't cache local build cache because we use a remote cache
 
       - name: Compile
         run: ./gradlew app-ose:assembleDebug
