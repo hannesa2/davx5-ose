@@ -5,6 +5,26 @@ import java.util.Properties
 import java.io.File
 import java.io.FileInputStream
 
+// Configuration-cache-safe git providers for versioning metadata.
+val gitCommitCount = providers.exec {
+    commandLine("git", "rev-list", "HEAD", "--count")
+}.standardOutput.asText.map { it.trim().toInt() + 405120000 }
+
+val gitDescribe = providers.environmentVariable("tag")
+    .orElse(
+        providers.exec {
+            commandLine("git", "describe", "--tags")
+        }.standardOutput.asText.map { it.trim() }
+    )
+
+val gitDirty = providers.exec {
+    commandLine("git", "diff-index", "--name-only", "HEAD", "--")
+}.standardOutput.asText.map { it.trim().isNotEmpty() }
+
+val buildVersionName = gitDescribe.zip(gitDirty) { describe, dirty ->
+    if (dirty) "$describe-DIRTY" else describe
+}
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.compose.compiler)
@@ -41,23 +61,9 @@ android {
 
         applicationId = "at.bitfire.davdroid"
 
-        /*
-         * Version names use Semantic Versioning. Pre-release identifiers are "alpha" (closed alpha in
-         * internal track), "beta" (public beta track) and "rc" (public beta track).
-         *
-         * Version codes are derived from the version name like this:
-         *
-         * MmmppIIII   (example `405120000`)   where
-         *
-         * - M is the major version (`4` in the example)
-         * - mm the minor version (two decimal digits, `05` in the example),
-         * - pp the patch level (two decimal digits, `12` in the example), and
-         * - IIII an increasing number (four decimal digits) that starts with `0000` and is increased for
-         *   every release with the same major/minor/patch version (alpha-1, alpha-2, beta-1, ..., final).
-         *   So usually the first pre-release has `0000` and the final version has the greatest number.
-         */
-        versionCode = 405140001
-        versionName = "4.5.14"
+        versionCode = gitCommitCount.get()
+        versionName = buildVersionName.get()
+        println("Build version ${versionName} (${versionCode})")
 
         base.archivesName = "davx5-$versionCode-$versionName"
 
