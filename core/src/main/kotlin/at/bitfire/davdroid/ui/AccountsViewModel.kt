@@ -5,6 +5,7 @@
 package at.bitfire.davdroid.ui
 
 import android.accounts.Account
+import android.accounts.AccountManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -13,18 +14,22 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import android.net.wifi.WifiManager
 import android.os.PowerManager
 import android.provider.CalendarContract
 import android.provider.ContactsContract
+import androidx.annotation.WorkerThread
 import androidx.core.content.getSystemService
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.lifecycle.ViewModel
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.WorkQuery
+import at.bitfire.davdroid.R
 import at.bitfire.davdroid.db.AppDatabase
 import at.bitfire.davdroid.repository.AccountRepository
 import at.bitfire.davdroid.servicedetection.RefreshCollectionsWorker
+import at.bitfire.davdroid.settings.AccountSettings
 import at.bitfire.davdroid.settings.Settings
 import at.bitfire.davdroid.settings.SettingsManager
 import at.bitfire.davdroid.sync.SyncDataType
@@ -36,6 +41,7 @@ import at.bitfire.davdroid.ui.account.AccountProgress
 import at.bitfire.davdroid.ui.composable.FlavorComposable
 import at.bitfire.davdroid.ui.intro.IntroPage
 import at.bitfire.davdroid.ui.intro.IntroPageFactory
+import at.bitfire.davdroid.util.PermissionUtils
 import at.bitfire.davdroid.util.broadcastReceiverFlow
 import at.bitfire.davdroid.util.packageChangedFlow
 import dagger.assisted.Assisted
@@ -221,6 +227,46 @@ class AccountsViewModel @AssistedInject constructor(
 
         awaitClose {
             connectivityManager.unregisterNetworkCallback(networkCallback)
+        }
+    }
+
+    /**
+     * Whether the device is currently connected to a WiFi network that is blocked by any account's
+     * "Blocked WiFi networks" setting. Updates reactively when WiFi connectivity changes.
+     */
+    val onBlockedWifi: Flow<Boolean> = callbackFlow {
+        val networkCallback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) { trySend(Unit) }
+            override fun onLost(network: Network) { trySend(Unit) }
+            override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) { trySend(Unit) }
+        }
+        val request = NetworkRequest.Builder()
+            .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+            .build()
+        connectivityManager.registerNetworkCallback(request, networkCallback)
+        trySend(Unit)
+        awaitClose { connectivityManager.unregisterNetworkCallback(networkCallback) }
+    }.flatMapLatest {
+        flow { emit(isOnBlockedWifi()) }
+    }.flowOn(Dispatchers.IO)
+
+    @WorkerThread
+    private fun isOnBlockedWifi(): Boolean {
+        if (!PermissionUtils.canAccessWifiSsid(context)) return false
+
+        val wifiManager = context.getSystemService<WifiManager>() ?: return false
+        @Suppress("DEPRECATION") val connectionInfo = wifiManager.connectionInfo ?: return false
+        val currentSsid = connectionInfo.ssid
+            ?.trim('"')
+            ?.takeIf { it.isNotEmpty() && it != "<unknown ssid>" }
+            ?: return false
+
+        val accountManager = AccountManager.get(context)
+        val accountType = context.getString(R.string.account_type)
+        return accountManager.getAccountsByType(accountType).any { account ->
+            val strSsids = accountManager.getUserData(account, AccountSettings.KEY_WIFI_BLOCKED_SSIDS)
+                ?: return@any false
+            strSsids.split(',').map { it.trim() }.filter { it.isNotEmpty() }.contains(currentSsid)
         }
     }
 
