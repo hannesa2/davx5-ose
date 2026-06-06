@@ -75,6 +75,7 @@ class SyncConditionsTest {
         accountSettings = mockk<AccountSettings> {
             every { account } returns Account("test", "test")
             every { getIgnoreVpns() } returns false     // default value
+            every { getSyncWifiBlockedSSIDs() } returns null  // no blocked networks by default
         }
 
         conditions = factory.create(accountSettings)
@@ -258,6 +259,9 @@ class SyncConditionsTest {
             // Wi-Fi SSID is correct
             every { conditions.correctWifiSsid() } returns true
 
+            // No blocked networks
+            every { conditions.notOnBlockedWifi() } returns true
+
             assertTrue(conditions.wifiConditionsMet())
         }
     }
@@ -274,7 +278,94 @@ class SyncConditionsTest {
             // Wi-Fi SSID is correct
             every { conditions.correctWifiSsid() } returns true
 
+            // No blocked networks
+            every { conditions.notOnBlockedWifi() } returns true
+
             assertFalse(conditions.wifiConditionsMet())
         }
+    }
+
+    @Test
+    fun testWifiConditionsMet_blockedWifi() {
+        // "Sync only over Wi-Fi" may be disabled – blocked check is independent
+        every { accountSettings.getSyncWifiOnly() } returns false
+
+        mockkObject(conditions) {
+            // Current WiFi is in the blocked list
+            every { conditions.notOnBlockedWifi() } returns false
+
+            assertFalse(conditions.wifiConditionsMet())
+        }
+    }
+
+    @Test
+    fun testNotOnBlockedWifi_noBlockedNetworks() {
+        every { accountSettings.getSyncWifiBlockedSSIDs() } returns null
+        assertTrue(conditions.notOnBlockedWifi())
+    }
+
+    @Test
+    fun testNotOnBlockedWifi_notOnWifi() {
+        every { accountSettings.getSyncWifiBlockedSSIDs() } returns listOf("BadWifi")
+
+        mockkObject(conditions) {
+            every { conditions.wifiAvailable() } returns false
+            assertTrue(conditions.notOnBlockedWifi())
+        }
+    }
+
+    @Test
+    fun testNotOnBlockedWifi_cannotReadSsid() {
+        every { accountSettings.getSyncWifiBlockedSSIDs() } returns listOf("BadWifi")
+
+        mockkObject(conditions) {
+            every { conditions.wifiAvailable() } returns true
+        }
+
+        mockkObject(PermissionUtils)
+        every { PermissionUtils.canAccessWifiSsid(any()) } returns false
+
+        // Fail open – allow sync when SSID cannot be determined
+        assertTrue(conditions.notOnBlockedWifi())
+    }
+
+    @Test
+    fun testNotOnBlockedWifi_connectedToBlockedSsid() {
+        every { accountSettings.getSyncWifiBlockedSSIDs() } returns listOf("BadWifi", "AnotherBad")
+
+        mockkObject(conditions) {
+            every { conditions.wifiAvailable() } returns true
+        }
+
+        mockkObject(PermissionUtils)
+        every { PermissionUtils.canAccessWifiSsid(any()) } returns true
+
+        val wifiManager = context.getSystemService<WifiManager>()!!
+        mockkObject(wifiManager)
+        every { wifiManager.connectionInfo } returns spyk<WifiInfo>().apply {
+            every { ssid } returns "BadWifi"
+        }
+
+        assertFalse(conditions.notOnBlockedWifi())
+    }
+
+    @Test
+    fun testNotOnBlockedWifi_connectedToAllowedSsid() {
+        every { accountSettings.getSyncWifiBlockedSSIDs() } returns listOf("BadWifi")
+
+        mockkObject(conditions) {
+            every { conditions.wifiAvailable() } returns true
+        }
+
+        mockkObject(PermissionUtils)
+        every { PermissionUtils.canAccessWifiSsid(any()) } returns true
+
+        val wifiManager = context.getSystemService<WifiManager>()!!
+        mockkObject(wifiManager)
+        every { wifiManager.connectionInfo } returns spyk<WifiInfo>().apply {
+            every { ssid } returns "GoodWifi"
+        }
+
+        assertTrue(conditions.notOnBlockedWifi())
     }
 }

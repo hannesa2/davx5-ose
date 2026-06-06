@@ -73,6 +73,7 @@ class AccountSettingsViewModel @AssistedInject constructor(
 
         val syncWifiOnly: Boolean = false,
         val syncWifiOnlySSIDs: List<String>? = null,
+        val syncWifiBlockedSSIDs: List<String>? = null,
         val ignoreVpns: Boolean = false,
 
         val credentials: Credentials = Credentials(),
@@ -132,6 +133,7 @@ class AccountSettingsViewModel @AssistedInject constructor(
 
             syncWifiOnly = accountSettings.getSyncWifiOnly(),
             syncWifiOnlySSIDs = accountSettings.getSyncWifiOnlySSIDs(),
+            syncWifiBlockedSSIDs = accountSettings.getSyncWifiBlockedSSIDs(),
             ignoreVpns = accountSettings.getIgnoreVpns(),
 
             credentials = accountSettings.credentials(),
@@ -175,6 +177,11 @@ class AccountSettingsViewModel @AssistedInject constructor(
 
     fun updateSyncWifiOnlySSIDs(ssids: List<String>?) = CoroutineScope(defaultDispatcher).launch {
         accountSettings.setSyncWifiOnlySSIDs(ssids)
+        reload()
+    }
+
+    fun updateSyncWifiBlockedSSIDs(ssids: List<String>?) = CoroutineScope(defaultDispatcher).launch {
+        accountSettings.setSyncWifiBlockedSSIDs(ssids)
         reload()
     }
 

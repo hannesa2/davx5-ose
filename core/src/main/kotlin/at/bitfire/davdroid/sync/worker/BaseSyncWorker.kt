@@ -109,11 +109,17 @@ abstract class BaseSyncWorker(
                 return Result.failure()
             }
 
-            if (inputData.getBoolean(INPUT_MANUAL, false))
-                logger.info("Manual sync, skipping network checks")
-            else {
-                val syncConditions = syncConditionsFactory.create(accountSettings)
+            val syncConditions = syncConditionsFactory.create(accountSettings)
 
+            // Always check blocked WiFi networks, even for manual syncs
+            if (!syncConditions.notOnBlockedWifi()) {
+                logger.info("Connected to blocked WiFi network. Won't sync.")
+                return Result.success()
+            }
+
+            if (inputData.getBoolean(INPUT_MANUAL, false))
+                logger.info("Manual sync, skipping remaining network checks")
+            else {
                 // check internet connection
                 if (!syncConditions.internetAvailable()) {
                     logger.info("WorkManager started SyncWorker without Internet connection. Aborting.")

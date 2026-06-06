@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.SignalCellularOff
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.SyncDisabled
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DrawerValue
@@ -100,6 +101,7 @@ fun AccountsScreen(
     val accounts by model.accountInfos.collectAsStateWithLifecycle(emptyList())
     val showSyncAll by model.showSyncAll.collectAsStateWithLifecycle(true)
     val showAddAccount by model.showAddAccount.collectAsStateWithLifecycle(AccountsViewModel.FABStyle.Standard)
+    val onBlockedWifi by model.onBlockedWifi.collectAsStateWithLifecycle(false)
 
     // Remember shown state, so the intro does not restart on rotation or theme-change
     var shown by rememberSaveable { mutableStateOf(false) }
@@ -117,6 +119,7 @@ fun AccountsScreen(
         accounts = accounts,
         showSyncAll = showSyncAll,
         onSyncAll = { model.syncAllAccounts() },
+        onBlockedWifi = onBlockedWifi,
         showAddAccount = showAddAccount,
         onAddAccount = onAddAccount,
         onShowAccount = onShowAccount,
@@ -138,6 +141,7 @@ fun AccountsScreen(
     accounts: List<AccountsViewModel.AccountInfo>,
     showSyncAll: Boolean = true,
     onSyncAll: () -> Unit = {},
+    onBlockedWifi: Boolean = false,
     showAddAccount: AccountsViewModel.FABStyle = AccountsViewModel.FABStyle.Standard,
     onAddAccount: () -> Unit = {},
     onShowAccount: (Account) -> Unit = {},
@@ -227,7 +231,7 @@ fun AccountsScreen(
                                 modifier = Modifier.padding(top = 24.dp)
                             ) {
                                 Icon(
-                                    Icons.Default.Sync,
+                                    if (onBlockedWifi) Icons.Default.SyncDisabled else Icons.Default.Sync,
                                     contentDescription = stringResource(R.string.accounts_sync_all)
                                 )
                             }

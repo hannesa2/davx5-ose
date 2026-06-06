@@ -388,6 +388,10 @@
     <string name="settings_sync_wifi_only_ssids_message">Comma-separated names (SSIDs) of allowed WiFi networks (leave blank for all)</string>
     <string name="settings_sync_wifi_only_ssids_permissions_required">WiFi SSID restriction requires further settings</string>
     <string name="settings_sync_wifi_only_ssids_permissions_action">Manage</string>
+    <string name="settings_sync_wifi_blocked_ssids">Blocked WiFi networks</string>
+    <string name="settings_sync_wifi_blocked_ssids_on">Won\'t sync over %s</string>
+    <string name="settings_sync_wifi_blocked_ssids_off">No WiFi networks are blocked</string>
+    <string name="settings_sync_wifi_blocked_ssids_message">Comma-separated names (SSIDs) of blocked WiFi networks (leave blank to disable)</string>
     <string name="settings_ignore_vpns">VPN requires underlying Internet</string>
     <string name="settings_ignore_vpns_on">VPN without underlying validated Internet connection is not enough to run synchronization (recommended)</string>
     <string name="settings_ignore_vpns_off">VPN without underlying validated Internet connection is enough to run synchronization</string>

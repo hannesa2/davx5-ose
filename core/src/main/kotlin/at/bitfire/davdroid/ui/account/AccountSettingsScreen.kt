@@ -114,6 +114,8 @@ fun AccountSettingsScreen(
             onUpdateSyncOnlyOnWifi = model::updateSyncWifiOnly,
             onlyOnSsids = uiState.syncWifiOnlySSIDs,
             onUpdateOnlyOnSsids = model::updateSyncWifiOnlySSIDs,
+            blockedSsids = uiState.syncWifiBlockedSSIDs,
+            onUpdateBlockedSsids = model::updateSyncWifiBlockedSSIDs,
             ignoreVpns = uiState.ignoreVpns,
             onUpdateIgnoreVpns = model::updateIgnoreVpns,
 
@@ -167,6 +169,8 @@ fun AccountSettingsScreen(
     onUpdateSyncOnlyOnWifi: (Boolean) -> Unit = {},
     onlyOnSsids: List<String>?,
     onUpdateOnlyOnSsids: (List<String>) -> Unit = {},
+    blockedSsids: List<String>?,
+    onUpdateBlockedSsids: (List<String>?) -> Unit = {},
     ignoreVpns: Boolean,
     onUpdateIgnoreVpns: (Boolean) -> Unit = {},
 
@@ -249,6 +253,8 @@ fun AccountSettingsScreen(
                 onUpdateSyncOnlyOnWifi = onUpdateSyncOnlyOnWifi,
                 onlyOnSsids = onlyOnSsids,
                 onUpdateOnlyOnSsids = onUpdateOnlyOnSsids,
+                blockedSsids = blockedSsids,
+                onUpdateBlockedSsids = onUpdateBlockedSsids,
                 ignoreVpns = ignoreVpns,
                 onUpdateIgnoreVpns = onUpdateIgnoreVpns,
 
@@ -296,6 +302,8 @@ fun AccountSettings_FromModel(
     onUpdateSyncOnlyOnWifi: (Boolean) -> Unit = {},
     onlyOnSsids: List<String>?,
     onUpdateOnlyOnSsids: (List<String>) -> Unit = {},
+    blockedSsids: List<String>?,
+    onUpdateBlockedSsids: (List<String>?) -> Unit = {},
     ignoreVpns: Boolean,
     onUpdateIgnoreVpns: (Boolean) -> Unit = {},
 
@@ -336,6 +344,8 @@ fun AccountSettings_FromModel(
             onUpdateSyncOnlyOnWifi = onUpdateSyncOnlyOnWifi,
             onlyOnSsids = onlyOnSsids,
             onUpdateOnlyOnSsids = onUpdateOnlyOnSsids,
+            blockedSsids = blockedSsids,
+            onUpdateBlockedSsids = onUpdateBlockedSsids,
             ignoreVpns = ignoreVpns,
             onUpdateIgnoreVpns = onUpdateIgnoreVpns
         )
@@ -385,6 +395,8 @@ fun SyncSettings(
     onUpdateSyncOnlyOnWifi: (Boolean) -> Unit = {},
     onlyOnSsids: List<String>?,
     onUpdateOnlyOnSsids: (List<String>) -> Unit = {},
+    blockedSsids: List<String>?,
+    onUpdateBlockedSsids: (List<String>?) -> Unit = {},
     ignoreVpns: Boolean,
     onUpdateIgnoreVpns: (Boolean) -> Unit = {}
 ) {
@@ -470,6 +482,34 @@ fun SyncSettings(
                     )
                 }
             }
+
+        var showBlockedSsidsDialog by remember { mutableStateOf(false) }
+        Setting(
+            icon = null,
+            name = stringResource(R.string.settings_sync_wifi_blocked_ssids),
+            summary =
+            if (blockedSsids != null)
+                stringResource(R.string.settings_sync_wifi_blocked_ssids_on, blockedSsids.joinToString(", "))
+            else
+                stringResource(R.string.settings_sync_wifi_blocked_ssids_off),
+            onClick = {
+                showBlockedSsidsDialog = true
+            }
+        )
+        if (showBlockedSsidsDialog)
+            EditTextInputDialog(
+                title = stringResource(R.string.settings_sync_wifi_blocked_ssids_message),
+                initialValue = blockedSsids?.joinToString(", ") ?: "",
+                onValueEntered = { newValue ->
+                    val newSsids = newValue.split(',')
+                        .map { it.trim() }
+                        .filter { it.isNotEmpty() }
+                        .distinct()
+                    onUpdateBlockedSsids(newSsids.ifEmpty { null })
+                    showBlockedSsidsDialog = false
+                },
+                onDismiss = { showBlockedSsidsDialog = false }
+            )
 
         SwitchSetting(
             icon = null,
@@ -780,6 +820,8 @@ fun AccountSettingsScreen_Preview() {
             onUpdateSyncOnlyOnWifi = {},
             onlyOnSsids = listOf("HeyWifi", "Another"),
             onUpdateOnlyOnSsids = {},
+            blockedSsids = listOf("BadWifi"),
+            onUpdateBlockedSsids = {},
             ignoreVpns = true,
             onUpdateIgnoreVpns = {},
 
