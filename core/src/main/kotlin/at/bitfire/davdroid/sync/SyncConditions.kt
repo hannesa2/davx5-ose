@@ -140,13 +140,49 @@ class SyncConditions @AssistedInject constructor(
     }
 
     /**
+     * Checks whether the current WiFi network is in the user-defined blocked list.
+     *
+     * Note: Should be connected to some WiFi before calling. If SSID can't be read,
+     * this method fails open (allows sync) to avoid blocking unintentionally.
+     *
+     * @return *true* if the current WiFi is NOT blocked (sync is allowed);
+     * *false* if the current WiFi SSID is in the blocked list
+     */
+    internal fun notOnBlockedWifi(): Boolean {
+        val blockedSSIDs = accountSettings.getSyncWifiBlockedSSIDs() ?: return true
+
+        if (!wifiAvailable())
+            return true
+
+        if (!PermissionUtils.canAccessWifiSsid(context)) {
+            logger.warning("Can't access WiFi SSID, unable to check blocked networks – allowing sync")
+            return true
+        }
+
+        val wifi = context.getSystemService<WifiManager>()!!
+        @Suppress("DEPRECATION") val info = wifi.connectionInfo
+        val currentSsid = info?.ssid?.trim('"')
+
+        return if (currentSsid != null && blockedSSIDs.contains(currentSsid)) {
+            logger.info("Connected to blocked WiFi network ($currentSsid), aborting sync")
+            false
+        } else
+            true
+    }
+
+    /**
      * Checks whether user imposed sync conditions from settings are met:
+     * - Blocked WiFi networks?
      * - Sync only on WiFi?
      * - Sync only on specific WiFi (SSID)?
      *
      * @return *true* if conditions are met; *false* if not
      */
     fun wifiConditionsMet(): Boolean {
+        // Check whether current WiFi is in the blocked list (independent of wifi-only setting)
+        if (!notOnBlockedWifi())
+            return false
+
         // May we sync without WiFi?
         if (!accountSettings.getSyncWifiOnly())
             return true     // yes, continue

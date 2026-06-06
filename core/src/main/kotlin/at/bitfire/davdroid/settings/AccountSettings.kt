@@ -201,6 +201,14 @@ class AccountSettings @AssistedInject constructor(
     fun setSyncWifiOnlySSIDs(ssids: List<String>?) =
         accountManager.setAndVerifyUserData(account, KEY_WIFI_ONLY_SSIDS, ssids?.joinToString(",").trimToNull())
 
+    fun getSyncWifiBlockedSSIDs(): List<String>? {
+        val strSsids = accountManager.getUserData(account, KEY_WIFI_BLOCKED_SSIDS)
+        return strSsids?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }?.takeIf { it.isNotEmpty() }
+    }
+
+    fun setSyncWifiBlockedSSIDs(ssids: List<String>?) =
+        accountManager.setAndVerifyUserData(account, KEY_WIFI_BLOCKED_SSIDS, ssids?.joinToString(",").trimToNull())
+
     fun getIgnoreVpns(): Boolean =
         when (accountManager.getUserData(account, KEY_IGNORE_VPNS)) {
             null -> settingsManager.getBoolean(KEY_IGNORE_VPNS)
@@ -378,6 +386,7 @@ class AccountSettings @AssistedInject constructor(
 
         const val KEY_WIFI_ONLY = "wifi_only"               // sync on WiFi only (default: false)
         const val KEY_WIFI_ONLY_SSIDS = "wifi_only_ssids"   // restrict sync to specific WiFi SSIDs
+        const val KEY_WIFI_BLOCKED_SSIDS = "wifi_blocked_ssids"  // block sync on specific WiFi SSIDs
         const val KEY_IGNORE_VPNS = "ignore_vpns"           // ignore vpns at connection detection
 
         /** Time range limitation to the past [in days]. Values:
